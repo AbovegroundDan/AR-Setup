@@ -13,7 +13,9 @@ import ARKit
 class ViewController: UIViewController, ARSCNViewDelegate {
 
     @IBOutlet var sceneView: ARSCNView!
-    
+    var sessionConfig: ARWorldTrackingSessionConfiguration = ARWorldTrackingSessionConfiguration()
+    var sceneController = MainScene()
+
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -23,21 +25,22 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         // Show statistics such as fps and timing information
         sceneView.showsStatistics = true
         
-        // Create a new scene
-        let scene = SCNScene(named: "art.scnassets/ship.scn")!
-        
-        // Set the scene to the view
-        sceneView.scene = scene
+        // Add a tap gesture recognizer to the view. You could also override touchesBegan and do it there, but lets stick to what's normal to iOS app devs
+        let tap = UITapGestureRecognizer()
+        tap.addTarget(self, action: #selector(didTap))
+        sceneView.addGestureRecognizer(tap)
+
+        if let scene = sceneController.scene {
+            // Set the scene to the view
+            sceneView.scene = scene
+        }
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
-        // Create a session configuration
-        let configuration = ARWorldTrackingSessionConfiguration()
-        
         // Run the view's session
-        sceneView.session.run(configuration)
+        sceneView.session.run(sessionConfig)
     }
     
     override func viewWillDisappear(_ animated: Bool) {
@@ -50,6 +53,30 @@ class ViewController: UIViewController, ARSCNViewDelegate {
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
         // Release any cached data, images, etc that aren't in use.
+    }
+
+    // MARK: - Gesture delegates
+    var currentTexture = 0
+    @objc func didTap(_ sender:UITapGestureRecognizer) {
+        let location = sender.location(in: sceneView)
+        
+        guard let frame = sceneView.session.currentFrame else {
+            return
+        }
+
+        let cameraPos = SCNVector3.positionFromTransform(frame.camera.transform)
+ 
+        // Note: z: 1.0 will unproject() the screen position to the far clipping plane.
+        let positionVec = SCNVector3(x: Float(location.x), y: Float(location.y), z: 1.0)
+        let screenPosOnFarClippingPlane = self.sceneView.unprojectPoint(positionVec)
+
+        let rayDirection = screenPosOnFarClippingPlane - cameraPos
+        let rayMult = (rayDirection / 1000.0) / 5
+        
+        let blockTextures = ["WoodCubeA.jpg", "WoodCubeB.jpg", "WoodCubeC.jpg"]
+        let randTexture = blockTextures[currentTexture % blockTextures.count]
+        currentTexture += 1
+        sceneController.addBlockToPos(position: rayMult + cameraPos, imageName: "art.scnassets/" + randTexture)
     }
 
     // MARK: - ARSCNViewDelegate
