@@ -1,4 +1,4 @@
-# ARTutorial1
+# AR Setup tutorial
 
 A simple first tutorial for getting an ARKit scene up and running with SceneKit. 
 
